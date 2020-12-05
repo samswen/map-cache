@@ -1,6 +1,6 @@
 {
   "name": "@samwen/map-cache",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "description": "a map based local cache",
   "main": "src/index.js",
   "scripts": {

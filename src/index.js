@@ -72,14 +72,18 @@ function maintain() {
     }
 }
 
-function put_data(cache_key, data, type = 'default') {
+function put_data(cache_key, data, type = 'default', ttl_ms) {
     if (cache_data.size >= cache_max_size) {
         return false;
     }
     if (!cache_types.includes(type)) {
         return false;
     }
-    const created_at = new Date().getTime();
+    let created_at = new Date().getTime();
+    const max_age = cache_type_max_ages[type];
+    if (ttl_ms && max_age && ttl_ms < max_age * 1000) {
+        created_at -= max_age * 1000 - ttl_ms;
+    }
     cache_data.set(cache_key, {created_at, data, type});
     return true;
 }
