@@ -1,6 +1,6 @@
 {
   "name": "@samwen/map-cache",
-  "version": "1.0.1",
+  "version": "1.0.2",
   "description": "a map based local cache",
   "main": "src/index.js",
   "scripts": {
@@ -20,8 +20,8 @@
   },
   "homepage": "https://github.com/samswen/map-cache#readme",
   "devDependencies": {
-    "chai": "^4.2.0",
-    "eslint": "^7.12.1",
+    "chai": "^4.3.0",
+    "eslint": "^7.19.0",
     "eslint-config-google": "^0.14.0",
     "mocha": "^8.2.0"
   }
