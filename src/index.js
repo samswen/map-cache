@@ -77,7 +77,7 @@ function put_data(cache_key, data, type = 'default', ttl_ms) {
     return true;
 }
 
-function put_data2(cache_key, data, ttl_secs) {
+function put_data2(cache_key, data, ttl_secs = cache_timer_interval) {
     if (cache_data.size > cache_max_size + 256) {
         return false;
     }
