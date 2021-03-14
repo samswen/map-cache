@@ -14,7 +14,6 @@ module.exports = {
 let cache_timer_interval = 180;
 const cache_data = new Map();
 const cache_type_max_ages = {default: cache_timer_interval};
-let cache_types = ['default'];
 let cache_max_size = 1024;
 let cache_timer_id = null;
 
@@ -22,25 +21,18 @@ function setup(max_size, type_max_ages, timer_interval) {
     if (max_size) {
         cache_max_size = max_size;
     }
-    if (type_max_ages) {
-        for (const type in type_max_ages) {
-            let max_age = type_max_ages[type];
-            if (max_age === null) {
-                max_age = null;
-            } else if (typeof max_age !== 'number') {
-                if (!isNaN(max_age)) {
-                    max_age = Number(max_age);
-                } else {
-                    max_age = null;
-                }
-            }
-            cache_type_max_ages[type] = max_age;
-        }
-    }
-    cache_types = Object.keys(cache_type_max_ages);
     if (timer_interval) {
         cache_type_max_ages.default = timer_interval;
         cache_timer_interval = timer_interval;
+    }
+    if (type_max_ages) {
+        for (const type in type_max_ages) {
+            let max_age = type_max_ages[type];
+            if (!max_age) {
+                max_age = cache_timer_interval;
+            }
+            cache_type_max_ages[type] = max_age;
+        }
     }
     cache_timer_id = setInterval(() => {
         maintain();
@@ -60,52 +52,37 @@ function close() {
 }
 
 function maintain() {
-    const now_ms = new Date().getTime();
     for (const [key, cache] of cache_data) {
-        const max_age = cache_type_max_ages[cache.type];
-        if (max_age === null) {
-            continue;
-        }
-        if (now_ms - cache.created_at >= max_age * 1000) {
+        if (cache.expired_at <= Date.now()) {
             cache_data.delete(key);
-            continue;
         }
     }
 }
 
 function put_data(cache_key, data, type = 'default', ttl_ms) {
-    if (cache_data.size >= cache_max_size) {
-        return false;
-    }
-    if (!cache_types.includes(type)) {
-        return false;
-    }
-    let created_at = new Date().getTime();
     const max_age = cache_type_max_ages[type];
-    if (ttl_ms && max_age && ttl_ms < max_age * 1000) {
-        created_at -= max_age * 1000 - ttl_ms;
+    if (!max_age) {
+        return false;
     }
-    cache_data.set(cache_key, {created_at, data, type});
+    if (cache_data.size > cache_max_size + 256) {
+        return false;
+    }
+    let expired_at;
+    if (ttl_ms && ttl_ms < max_age * 1000) {
+        expired_at = Date.now() + ttl_ms;
+    } else {
+        expired_at = Date.now() + max_age * 1000;
+    }
+    cache_data.set(cache_key, {expired_at, data});
     return true;
 }
 
-function put_data2(cache_key, data, type = 'default', ttl_secs) {
-    if (cache_data.size >= cache_max_size) {
+function put_data2(cache_key, data, ttl_secs) {
+    if (cache_data.size > cache_max_size + 256) {
         return false;
     }
-    if (!cache_types.includes(type)) {
-        return false;
-    }
-    let created_at = new Date().getTime();
-    const max_age = cache_type_max_ages[type];
-    if (ttl_secs && max_age) {
-        if (ttl_secs < max_age) {
-            created_at -= (max_age - ttl_secs) * 1000;
-        } else if (ttl_secs > max_age) {
-            created_at += (ttl_secs - max_age) * 1000;
-        }
-    }
-    cache_data.set(cache_key, {created_at, data, type});
+    const expired_at = Date.now() + ttl_secs * 1000;
+    cache_data.set(cache_key, {expired_at, data});
     return true;
 }
 
@@ -114,16 +91,7 @@ function get_data(cache_key) {
     if (!cache) {
         return null;
     }
-    if (!cache.created_at || !cache.data || !cache.type) {
-        cache_data.delete(cache_key);
-        return null;
-    }
-    const max_age = cache_type_max_ages[cache.type];
-    if (max_age === null) {
-        return cache.data;
-    }
-    const now_ms = new Date().getTime();
-    if (now_ms - cache.created_at > max_age * 1000) {
+    if (cache.expired_at < Date.now()) {
         cache_data.delete(cache_key);
         return null;
     }
