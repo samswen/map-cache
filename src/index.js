@@ -5,6 +5,7 @@ module.exports = {
     close,
     get_data,
     put_data,
+    put_data2,
     del_data,
     cleanup,
     size,
@@ -83,6 +84,26 @@ function put_data(cache_key, data, type = 'default', ttl_ms) {
     const max_age = cache_type_max_ages[type];
     if (ttl_ms && max_age && ttl_ms < max_age * 1000) {
         created_at -= max_age * 1000 - ttl_ms;
+    }
+    cache_data.set(cache_key, {created_at, data, type});
+    return true;
+}
+
+function put_data2(cache_key, data, type = 'default', ttl_secs) {
+    if (cache_data.size >= cache_max_size) {
+        return false;
+    }
+    if (!cache_types.includes(type)) {
+        return false;
+    }
+    let created_at = new Date().getTime();
+    const max_age = cache_type_max_ages[type];
+    if (ttl_secs && max_age) {
+        if (ttl_secs < max_age) {
+            created_at -= (max_age - ttl_secs) * 1000;
+        } else if (ttl_secs > max_age) {
+            created_at += (ttl_secs - max_age) * 1000;
+        }
     }
     cache_data.set(cache_key, {created_at, data, type});
     return true;
